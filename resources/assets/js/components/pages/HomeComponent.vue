@@ -13,13 +13,13 @@
         </div>
         <div class="panel-block">
             <p class="control has-icons-left">
-            <input class="input is-small" type="text" placeholder="search">
+            <input class="input is-small" type="text" placeholder="search" v-model="searchQuery">
             <span class="icon is-small is-left">
-                <i class="fas fa-search"></i>
+                <i class="fa fa-search"></i>
             </span>
             </p>
         </div>
-        <a v-show="lists.length > 0" v-for="(item,key) in lists" v-bind:key="item.id" class="panel-block is-active">
+        <a v-show="lists.length > 0" v-for="(item,key) in tempLists" v-bind:key="item.id" class="panel-block is-active">
             <span class="column is-4">
                 {{ item.name }}
             </span>
@@ -58,9 +58,25 @@
                 updateActive: '',
                 lists:{},
 				errors:{},
-                loading: false
+                searchQuery: '',
+                loading: false,
+                tempLists:''
             }
         },
+        watch:{
+			searchQuery(){
+				if (this.searchQuery.length > 0) {
+					this.tempLists = this.lists.filter((item) => {
+						return Object.keys(item).some((key)=>{
+							let string = String(item[key]) 
+							return string.toLowerCase().indexOf(this.searchQuery.toLowerCase())>-1
+						})
+					});
+				}else{
+					this.tempLists = this.lists
+				}
+			}
+		},
         mounted () {
             this.getPhonebooks();
         },
@@ -70,30 +86,27 @@
             },
             openShow (key) {
                 this.showActive = 'is-active';
-                this.$children[1].list = this.lists[key];
+                this.$children[1].list = this.tempLists[key];
             },
             openUpdate (key) {
                 this.updateActive = 'is-active';
-                this.$children[2].list = this.lists[key];
+                this.$children[2].list = this.tempLists[key];
             },
             closeModal () {
                 this.addActive = this.showActive = this.updateActive = '';
             },
             getPhonebooks () {
                 axios.post('/getData')
-                     .then((response) => this.lists = response.data)
-                     .catch((error) => this.errors = error.response.data.errors)
+                .then((response)=> this.lists = this.tempLists = response.data)
+                .catch((error) => this.errors = error.response.data.errors)
             },
             del(key, id){
-                this.loading = !this.loading
-                if (confirm('Are you sure?')){
-                    axios.delete(`/phonebook/${id}`)
-                        .then((response)=> {
-                            this.lists.splice(key, 1);
-                            this.loading = !this.loading
-                        })
-                        .catch((error) => this.errors = error.response.data.errors)
-                }
+                if (confirm("Are you sure ?")) {
+					this.loading = !this.loading
+					axios.delete(`/phonebook/${id}`)
+					.then((response)=> {this.lists.splice(key,1);this.loading = !this.loading})
+					.catch((error) => this.errors = error.response.data.errors)	
+				}
             }
         }
     }
